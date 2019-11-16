@@ -1,3 +1,6 @@
+property p2Home : (path to downloads folder from user domain as text)
+property pFolder : "NewEvents"
+
 (****************************
 Splits the String based on the passed delimiters
 ****************************)
@@ -92,23 +95,26 @@ on makeDir(nDir)
 end makeDir
 
 -- 1) Set destination folder
-set dest to "/Users/mikeyb/Downloads/" as POSIX file as text -- the destination folder (use a valid path). -- change this to your default path for a fixed folder
+--set dest to "/Users/mikeyb/Downloads/" as POSIX file as text -- the destination folder (use a valid path). -- change this to your default path for a fixed folder
+--set dest to "/Users/mikeyb/" as POSIX file as text -- the destination folder (use a valid path). -- change this to your default path for a fixed folder
+set dest to p2Home
 --Uncomment next two lines to have the user asked for destination folder
 --set destination to choose folder with prompt "Select folder to save the albums to" default location (the path to the downloads folder as alias)
 --set dest to ((the POSIX path of destination) as text) as POSIX file as text
 log dest
 
 -- 2) Display a dialog to select the original images or the edited versions
-set expChoice to display dialog "Do you want to export the originals or the edited versions?" buttons {"Originals", "Edited versions"} default button 2 with icon 2
-set orig to (button returned of expChoice is "Originals")
+--set expChoice to display dialog "Do you want to export the originals or the edited versions?" buttons {"Originals", "Edited versions"} default button 2 with icon 2
+--set orig to (button returned of expChoice is "Originals")
+set orig to false
 
 
 -- 3) Get list of albums in Folder NewEvents
 -- Can remove "in folder "New Events" part to get list of all albums
 tell application "Photos"
 	activate
-	set unsorted to (name of albums in folder "NewEvents")
-	--set unsorted to (name of albums)
+	set unsorted to (name of albums in folder pFolder)
+	--set unsorted to (id of albums in folder "NewEvents")
 end tell
 
 set albumLst to sortList(unsorted)
@@ -126,7 +132,7 @@ tell application "Photos"
 			log text returned of grpPhotoName
 			set pGrp to text returned of grpPhotoName
 			
-			set nDir to dest & albName
+			set nDir to dest & name of album albName in folder pFolder
 			log nDir
 			my makeDir(nDir)
 			
@@ -134,10 +140,11 @@ tell application "Photos"
 			if orig then
 				export (get media items of album albName) to (nDir as alias) with using originals --  export the original versions
 			else
-				export (get media items of album albName) to (nDir as alias) without using originals -- export the edited versions
+				export (get media items of album albName in folder pFolder) to (nDir as alias) without using originals -- export the edited versions
 			end if
 			
-			set imgLst to media items of album albName as list
+			--set imgLst to media items of album id albName as list
+			set imgLst to media items of album albName in folder pFolder as list
 			set imgNbr to 1
 			-- 6) Loop through list of images that were in the album exported
 			-- Determine the new name to use for the exported images, set the title to that name
@@ -147,9 +154,13 @@ tell application "Photos"
 				log "Original Name: " & pOrigName
 				
 				if not orig then
-					set pExporalbName to my replace_chars(pOrigName, ".HEIC", ".jpg")
-					set pExporalbName to my replace_chars(pExporalbName, ".PNG", ".jpg")
-					set pExporalbName to my replace_chars(pExporalbName, ".MOV", ".m4v")
+					set pExporalbName to my replace_chars(pOrigName, ".HEIC", ".jpeg")
+					set pExporalbName to my replace_chars(pExporalbName, ".PNG", ".jpeg")
+					set pExporalbName to my replace_chars(pExporalbName, ".jpeg", ".jpeg")
+					set pExporalbName to my replace_chars(pExporalbName, ".JPG", ".jpeg")
+					set pExporalbName to my replace_chars(pExporalbName, ".jpg", ".jpeg")
+					set pExporalbName to my replace_chars(pExporalbName, ".MOV", ".mov")
+					--set pExporalbName to my replace_chars(pExporalbName, ".mov", ".m4v")
 					set pExporalbName to my replace_chars(pExporalbName, ".mp4", ".m4v")
 					set pExporalbName to my replace_chars(pExporalbName, ".MP4", ".m4v")
 				end if
@@ -205,8 +216,10 @@ tell application "Photos"
 				end if
 				
 				tell application "Finder"
-					set modification date of file (nDir & ":" & pExporalbName) to pDateTime
-					set name of file (nDir & ":" & pExporalbName) to (pNewName & imgExt)
+					log ("directory and file: " & nDir & ":" & pExporalbName)
+					--open file (nDir & ":" & pExporalbName as alias)
+					set modification date of file (nDir & ":" & pExporalbName as alias) to pDateTime
+					set name of file (nDir & ":" & pExporalbName as alias) to (pNewName & imgExt)
 				end tell
 				set imgNbr to imgNbr + 1
 			end repeat
