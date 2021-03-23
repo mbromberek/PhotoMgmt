@@ -94,6 +94,39 @@ on makeDir(nDir)
 	do shell script "mkdir -p " & quoted form of POSIX path of nDir
 end makeDir
 
+(*
+*)
+on determineFileName(dName, fNameOrig)
+	set fNameSplit to my theSplit(fNameOrig, ".")
+	set nbr to 1
+	set fNameExt to item -1 of fNameSplit
+	--set fName to item 1 of fNameSplit & "." & fNameExt
+	--set fNameNoExt to do shell script "${" & quoted form of fNameOrig & "%.*}"
+	set fNameNoExt to do shell script "str=" & quoted form of fNameOrig & ";echo ${str%.*}"
+	set fName to fNameNoExt & "." & fNameExt
+	
+	tell application "Finder"
+		repeat 9 times
+			if exists file (dName & ":" & fName) then
+				return fName
+			else
+				log "FILE DOES NOT EXIST: " & fName
+				set fName to fNameNoExt & " (" & nbr & ")" & "." & fNameExt
+				log "Try: " & fName
+				
+			end if
+			set nbr to nbr + 1
+		end repeat
+	end tell
+	error "Could not find file name for: " & fNameOrig
+end determineFileName
+
+(*
+set theText to "I ate an apple at 11:54 pm without the skin."
+set theTime to do shell script "awk -F ' at | am | pm ' '{print $2}'<<<" & quoted form of theText
+log "The time was: " & theTime
+*)
+
 -- 1) Set destination folder
 --set dest to "/Users/mikeyb/Downloads/" as POSIX file as text -- the destination folder (use a valid path). -- change this to your default path for a fixed folder
 --set dest to "/Users/mikeyb/" as POSIX file as text -- the destination folder (use a valid path). -- change this to your default path for a fixed folder
@@ -120,7 +153,7 @@ end tell
 set albumLst to sortList(unsorted)
 set albNameLst to choose from list albumLst with prompt "Select some albums" with multiple selections allowed
 --set albNameLst to "Pixel-wrk" as list --hardcode album to use for debugging
-log albNameLst
+log "Album Name:" & albNameLst
 
 
 tell application "Photos"
@@ -166,9 +199,10 @@ tell application "Photos"
 				end if
 				log "Export Name: " & pExporalbName
 				
-				set pNewExt to item 2 of my theSplit(pExporalbName, ".")
+				set pNewExt to item -1 of my theSplit(pExporalbName, ".")
 				set imgExt to "." & pNewExt
 				log imgExt
+				set pExportImgName to item 1 of my theSplit(pExporalbName, ".")
 				
 				set {year:y, month:m, day:d} to (date of currImg)
 				set pDateStr to y & my add_leading_zeros(m * 1, 1) & my add_leading_zeros(d, 1) as string
@@ -215,12 +249,16 @@ tell application "Photos"
 					set keywords of currImg to pKey
 				end if
 				
+				set pExporalbName to my determineFileName(nDir, pExporalbName)
 				tell application "Finder"
 					log ("directory and file: " & nDir & ":" & pExporalbName)
 					--open file (nDir & ":" & pExporalbName as alias)
-					if not (exists file (nDir & ":" & pExporalbName)) then
-						log "FILE DOES NOT EXIST"
-					end if
+					(*if not (exists file (nDir & ":" & pExporalbName)) then
+						log "FILE DOES NOT EXIST: " & pExporalbName
+						set pExporalbName to pExportImgName & " (1)" & imgExt
+						log "Try: " & pExporalbName
+						
+					end if*)
 					
 					try
 						set name of file (nDir & ":" & pExporalbName as alias) to (pNewName & imgExt)
