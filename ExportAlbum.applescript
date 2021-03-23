@@ -95,6 +95,8 @@ on makeDir(nDir)
 end makeDir
 
 (*
+Take passed in name and check if it exists. If it does not try adding (#) from 1 to 9 to see if there is a match for name then. 
+Uses parameter expansion in shell script to get the text of file name before the last period
 *)
 on determineFileName(dName, fNameOrig)
 	set fNameSplit to my theSplit(fNameOrig, ".")
@@ -120,12 +122,6 @@ on determineFileName(dName, fNameOrig)
 	end tell
 	error "Could not find file name for: " & fNameOrig
 end determineFileName
-
-(*
-set theText to "I ate an apple at 11:54 pm without the skin."
-set theTime to do shell script "awk -F ' at | am | pm ' '{print $2}'<<<" & quoted form of theText
-log "The time was: " & theTime
-*)
 
 -- 1) Set destination folder
 --set dest to "/Users/mikeyb/Downloads/" as POSIX file as text -- the destination folder (use a valid path). -- change this to your default path for a fixed folder
