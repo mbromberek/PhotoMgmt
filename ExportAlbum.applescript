@@ -218,8 +218,25 @@ tell application "Photos"
 				tell application "Finder"
 					log ("directory and file: " & nDir & ":" & pExporalbName)
 					--open file (nDir & ":" & pExporalbName as alias)
-					set modification date of file (nDir & ":" & pExporalbName as alias) to pDateTime
-					set name of file (nDir & ":" & pExporalbName as alias) to (pNewName & imgExt)
+					if not (exists file (nDir & ":" & pExporalbName)) then
+						log "FILE DOES NOT EXIST"
+					end if
+					
+					try
+						set name of file (nDir & ":" & pExporalbName as alias) to (pNewName & imgExt)
+					on error errMsg number errorNumber
+						log errorNumber & " " & errMsg
+						if errorNumber is equal to -48 then
+							log "ERROR: Could not rename " & pOrigName & " to " & pNewName & " new name already exists"
+							set pNewName to (pNewName & " (" & imgNbr & ")")
+							set name of file (nDir & ":" & pExporalbName as alias) to (pNewName & imgExt)
+						else if errorNumber is equal to -1700 then
+							log "ERROR: Could not find file " & pOrigName & " to rename to " & pNewName
+						else
+							log "ERROR: Unknown Error Occurred"
+						end if
+					end try
+					set modification date of file (nDir & ":" & pNewName & imgExt as alias) to pDateTime
 				end tell
 				set imgNbr to imgNbr + 1
 			end repeat
