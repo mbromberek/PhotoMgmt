@@ -94,6 +94,45 @@ on makeDir(nDir)
 	do shell script "mkdir -p " & quoted form of POSIX path of nDir
 end makeDir
 
+(*
+Take passed in file name. Return dictionary containing same full file name (fullName), file name without extension (fName), and the file names extension (extension) 
+Uses parameter expansion in shell script to get the text of file name before the last period and extension after the last period
+*)
+on splitFileName(fNameOrig)
+	set fNameExt to do shell script "str=" & quoted form of fNameOrig & ";echo ${str%.*}"
+	set fNameNoExt to do shell script "str=" & quoted form of fNameOrig & ";echo ${str##*.}"
+	set fileNameDict to {fName:fNameNoExt, fullName:fNameOrig, extension:fNameExt}
+	return fileNameDict
+end splitFileName
+
+(*
+Take passed in name and check if it exists. If it does not try adding (#) from 1 to 9 to see if there is a match for name then. 
+Uses parameter expansion in shell script to get the text of file name before the last period
+*)
+on determineFileName(dName, fNameOrig)
+	set nbr to 1
+	set fileNameDict to my splitFileName(fNameOrig)
+	set fNameExt to (fName of fileNameDict)
+	set fNameNoExt to (extension of fileNameDict)
+	
+	set fName to fNameNoExt & "." & fNameExt
+	tell application "Finder"
+		repeat 9 times
+			if exists file (dName & ":" & fName) then
+				return fName
+			else
+				log "FILE DOES NOT EXIST: " & fName
+				set fName to fNameNoExt & " (" & nbr & ")" & "." & fNameExt
+				log "Try: " & fName
+				
+			end if
+			set nbr to nbr + 1
+		end repeat
+	end tell
+	error "Could not find file name for: " & fNameOrig number -9901
+end determineFileName
+
+
 -- 1) Set destination folder
 --set dest to "/Users/mikeyb/Downloads/" as POSIX file as text -- the destination folder (use a valid path). -- change this to your default path for a fixed folder
 --set dest to "/Users/mikeyb/" as POSIX file as text -- the destination folder (use a valid path). -- change this to your default path for a fixed folder
@@ -169,6 +208,7 @@ tell application "Photos"
 					--set pExporalbName to my replace_chars(pExporalbName, ".mp4", ".m4v")
 					--set pExporalbName to my replace_chars(pExporalbName, ".MP4", ".m4v")
 				end if
+				set pExporalbName to my determineFileName(nDir, pExporalbName)
 				log "Export Name: " & pExporalbName
 				
 				--Set imgExt to the characters after the last .
@@ -188,42 +228,19 @@ tell application "Photos"
 				
 				set pDateTime to (date of currImg)
 				
-				
-				--error number -128
-				
-				(*set pDesc to description of currImg*)
-				
-				-- If a photo is set to favorite set its rating to 4, else 3 
-				(*set pFav to favorite of currImg
-				if pFav then
-					set pRating to "4"
-				else
-					set pRating to "3"
-				end if*)
-				
 				--Generate new photo name
 				set pNewName to pGrp & " - " & pDateStr & "_" & pTimeStr
-				(*if pDesc is missing value then
-					--set pNewName to pGrp & " - " & pDateStr & " - " & my add_leading_zeros(imgNbr, 2) & " - " & pRating
-					set pNewName to pGrp & " - " & pDateStr & "_" & pTimeStr & " - " & pRating
-				else
-					--set pNewName to pGrp & " - " & pDateStr & " - " & my add_leading_zeros(imgNbr, 2) & " - " & pRating & " - " & pDesc
-					set pNewName to pGrp & " - " & pDateStr & "_" & pTimeStr & " - " & pRating & " - " & pDesc
-				end if*)
 				
-				--Sets the Photo tital to the new name for the image
+				
+				
+				tell application "Finder"
+					if exists file (nDir & ":" & pNewName & imgExt) then
+						log "something"
+						set pNewName to (pNewName & " (" & imgNbr & ")")
+					end if
+				end tell
+				
 				log "New Name: " & pNewName
-				--Set title to new image name
-				(*set name of currImg to pNewName*)
-				
-				--Sets a star rating in the keyword for the image, if there are already keywords the new one is appended
-				(*set pKey to keywords of currImg
-				if pKey is missing value then
-					set keywords of currImg to pRating & " Star" as list
-				else
-					copy pRating & " Star" to the end of the pKey
-					set keywords of currImg to pKey
-				end if*)
 				
 				--Rename the output file
 				--Had to use mv to rename files due to any files that contain a . at the start of the name
