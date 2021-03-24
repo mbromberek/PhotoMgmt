@@ -95,18 +95,31 @@ on makeDir(nDir)
 end makeDir
 
 (*
+Take passed in file name. Return dictionary containing same full file name (fullName), file name without extension (fName), and the file names extension (extension) 
+Uses parameter expansion in shell script to get the text of file name before the last period and extension after the last period
+*)
+on splitFileName(fNameOrig)
+	set fNameExt to do shell script "str=" & quoted form of fNameOrig & ";echo ${str%.*}"
+	set fNameNoExt to do shell script "str=" & quoted form of fNameOrig & ";echo ${str##*.}"
+	set fileNameDict to {fName:fNameNoExt, fullName:fNameOrig, extension:fNameExt}
+	return fileNameDict
+end splitFileName
+
+(*
 Take passed in name and check if it exists. If it does not try adding (#) from 1 to 9 to see if there is a match for name then. 
 Uses parameter expansion in shell script to get the text of file name before the last period
 *)
 on determineFileName(dName, fNameOrig)
-	set fNameSplit to my theSplit(fNameOrig, ".")
+	--set fNameSplit to my theSplit(fNameOrig, ".")
 	set nbr to 1
-	set fNameExt to item -1 of fNameSplit
-	--set fName to item 1 of fNameSplit & "." & fNameExt
-	--set fNameNoExt to do shell script "${" & quoted form of fNameOrig & "%.*}"
-	set fNameNoExt to do shell script "str=" & quoted form of fNameOrig & ";echo ${str%.*}"
-	set fName to fNameNoExt & "." & fNameExt
+	--set fNameExt to item -1 of fNameSplit
+	(*set fNameExt to do shell script "str=" & quoted form of fNameOrig & ";echo ${str##*.}"
+	set fNameNoExt to do shell script "str=" & quoted form of fNameOrig & ";echo ${str%.*}"*)
+	set fileNameDict to my splitFileName(fNameOrig)
+	set fNameExt to (fName of fileNameDict)
+	set fNameNoExt to (extension of fileNameDict)
 	
+	set fName to fNameNoExt & "." & fNameExt
 	tell application "Finder"
 		repeat 9 times
 			if exists file (dName & ":" & fName) then
@@ -120,7 +133,7 @@ on determineFileName(dName, fNameOrig)
 			set nbr to nbr + 1
 		end repeat
 	end tell
-	error "Could not find file name for: " & fNameOrig
+	error "Could not find file name for: " & fNameOrig number -9901
 end determineFileName
 
 -- 1) Set destination folder
@@ -166,11 +179,13 @@ tell application "Photos"
 			my makeDir(nDir)
 			
 			-- 5) Export the photos to the Directory
-			if orig then
-				export (get media items of album albName) to (nDir as alias) with using originals --  export the original versions
-			else
-				export (get media items of album albName in folder pFolder) to (nDir as alias) without using originals -- export the edited versions
-			end if
+			with timeout of 2700 seconds
+				if orig then
+					export (get media items of album albName) to (nDir as alias) with using originals --  export the original versions
+				else
+					export (get media items of album albName in folder pFolder) to (nDir as alias) without using originals -- export the edited versions
+				end if
+			end timeout
 			
 			--set imgLst to media items of album id albName as list
 			set imgLst to media items of album albName in folder pFolder as list
@@ -198,7 +213,6 @@ tell application "Photos"
 				set pNewExt to item -1 of my theSplit(pExporalbName, ".")
 				set imgExt to "." & pNewExt
 				log imgExt
-				set pExportImgName to item 1 of my theSplit(pExporalbName, ".")
 				
 				set {year:y, month:m, day:d} to (date of currImg)
 				set pDateStr to y & my add_leading_zeros(m * 1, 1) & my add_leading_zeros(d, 1) as string
@@ -210,8 +224,6 @@ tell application "Photos"
 				
 				set pDateTime to (date of currImg)
 				
-				
-				--error number -128
 				
 				set pDesc to description of currImg
 				
@@ -225,15 +237,11 @@ tell application "Photos"
 				
 				--Generate new photo name
 				if pDesc is missing value then
-					--set pNewName to pGrp & " - " & pDateStr & " - " & my add_leading_zeros(imgNbr, 2) & " - " & pRating
 					set pNewName to pGrp & " - " & pDateStr & "_" & pTimeStr & " - " & pRating
 				else
-					--set pNewName to pGrp & " - " & pDateStr & " - " & my add_leading_zeros(imgNbr, 2) & " - " & pRating & " - " & pDesc
 					set pNewName to pGrp & " - " & pDateStr & "_" & pTimeStr & " - " & pRating & " - " & pDesc
 				end if
 				
-				--Sets the Photo tital to the new name for the image
-				log "New Name: " & pNewName
 				set name of currImg to pNewName --Set title to new image name
 				
 				--Sets a star rating in the keyword for the image, if there are already keywords the new one is appended
@@ -245,33 +253,30 @@ tell application "Photos"
 					set keywords of currImg to pKey
 				end if
 				
-				set pExporalbName to my determineFileName(nDir, pExporalbName)
-				tell application "Finder"
-					log ("directory and file: " & nDir & ":" & pExporalbName)
-					--open file (nDir & ":" & pExporalbName as alias)
-					(*if not (exists file (nDir & ":" & pExporalbName)) then
-						log "FILE DOES NOT EXIST: " & pExporalbName
-						set pExporalbName to pExportImgName & " (1)" & imgExt
-						log "Try: " & pExporalbName
-						
-					end if*)
-					
-					try
-						set name of file (nDir & ":" & pExporalbName as alias) to (pNewName & imgExt)
-					on error errMsg number errorNumber
-						log errorNumber & " " & errMsg
-						if errorNumber is equal to -48 then
-							log "ERROR: Could not rename " & pOrigName & " to " & pNewName & " new name already exists"
+				try
+					set pExporalbName to my determineFileName(nDir, pExporalbName)
+					tell application "Finder"
+						log ("current directory and file: " & nDir & ":" & pExporalbName)
+						log ("new directory and file: " & nDir & ":" & pNewName & imgExt)
+						if exists file (nDir & ":" & pNewName & imgExt) then
+							log "something"
 							set pNewName to (pNewName & " (" & imgNbr & ")")
-							set name of file (nDir & ":" & pExporalbName as alias) to (pNewName & imgExt)
-						else if errorNumber is equal to -1700 then
-							log "ERROR: Could not find file " & pOrigName & " to rename to " & pNewName
-						else
-							log "ERROR: Unknown Error Occurred"
 						end if
-					end try
-					set modification date of file (nDir & ":" & pNewName & imgExt as alias) to pDateTime
-				end tell
+						set name of file (nDir & ":" & pExporalbName as alias) to (pNewName & imgExt)
+						set modification date of file (nDir & ":" & pNewName & imgExt as alias) to pDateTime
+					end tell
+				on error errMsg number errorNumber
+					log errorNumber & " " & errMsg
+					if errorNumber is equal to -48 then
+						log "ERROR: Could not rename " & pOrigName & " to " & pNewName & " new name already exists"
+					else if errorNumber is equal to -1700 then
+						log "ERROR: Could not find file " & pOrigName & " to rename to " & pNewName
+					else if errorNumber is equal to -9901 then
+						log "ERROR: Could not find file " & pOrigName & " to rename to " & pNewName
+					else
+						log "ERROR: Unknown Error Occurred"
+					end if
+				end try
 				set imgNbr to imgNbr + 1
 			end repeat
 			
