@@ -110,11 +110,7 @@ Take passed in name and check if it exists. If it does not try adding (#) from 1
 Uses parameter expansion in shell script to get the text of file name before the last period
 *)
 on determineFileName(dName, fNameOrig)
-	--set fNameSplit to my theSplit(fNameOrig, ".")
 	set nbr to 1
-	--set fNameExt to item -1 of fNameSplit
-	(*set fNameExt to do shell script "str=" & quoted form of fNameOrig & ";echo ${str##*.}"
-	set fNameNoExt to do shell script "str=" & quoted form of fNameOrig & ";echo ${str%.*}"*)
 	set fileNameDict to my splitFileName(fNameOrig)
 	set fNameExt to (fName of fileNameDict)
 	set fNameNoExt to (extension of fileNameDict)
@@ -187,7 +183,6 @@ tell application "Photos"
 				end if
 			end timeout
 			
-			--set imgLst to media items of album id albName as list
 			set imgLst to media items of album albName in folder pFolder as list
 			set imgNbr to 1
 			-- 6) Loop through list of images that were in the album exported
