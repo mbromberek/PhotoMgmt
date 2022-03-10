@@ -175,7 +175,7 @@ tell application "Photos"
 			my makeDir(nDir)
 			
 			-- 5) Export the photos to the Directory
-			with timeout of 3500 seconds
+			with timeout of 7500 seconds
 				if orig then
 					export (get media items of album albName) to (nDir as alias) with using originals --  export the original versions
 				else
