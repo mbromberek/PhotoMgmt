@@ -116,12 +116,16 @@ on determineFileName(dName, fNameOrig)
 	set fNameNoExt to (extension of fileNameDict)
 	
 	set fName to fNameNoExt & "." & fNameExt
+	
 	tell application "Finder"
 		repeat 9 times
-			if exists file (dName & ":" & fName) then
+			set fExists to do shell script "ls -l " & quoted form of POSIX path of (dName & ":" & fName) & " | wc -l" 
+			log fExists
+			--if exists file (dName & ":" & fName) then
+			if fExists = "       1" then
 				return fName
 			else
-				log "FILE DOES NOT EXIST: " & fName
+				log "FILE DOES NOT EXIST: " & (dName & ":" & fName)
 				set fName to fNameNoExt & " (" & nbr & ")" & "." & fNameExt
 				log "Try: " & fName
 				
@@ -175,7 +179,7 @@ tell application "Photos"
 			my makeDir(nDir)
 			
 			-- 5) Export the photos to the Directory
-			with timeout of 7500 seconds
+			with timeout of 9500 seconds
 				if orig then
 					export (get media items of album albName) to (nDir as alias) with using originals --  export the original versions
 				else
